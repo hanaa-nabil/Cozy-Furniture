@@ -1,0 +1,18 @@
+﻿using Microsoft.AspNetCore.Identity;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Furniture.Domain.Entities
+{
+    public class ApplicationUser : IdentityUser
+    {
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsEmailConfirmed { get; set; } = false;
+        public string? ProfilePictureUrl { get; set; }
+    }
+}
