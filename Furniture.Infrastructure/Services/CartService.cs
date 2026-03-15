@@ -33,22 +33,50 @@ namespace Furniture.Infrastructure.Services
                 }).ToListAsync();
         }
 
-        public async Task AddToCartAsync(string userId, CartItemDto dto)
+        public async Task<CartItemResponseDto> AddToCartAsync(string userId, CartItemDto dto)
         {
             var existing = await _context.CartItems
+                .Include(c => c.Product)        
                 .FirstOrDefaultAsync(c => c.UserId == userId && c.ProductId == dto.ProductId);
 
             if (existing != null)
+            {
                 existing.Quantity += dto.Quantity;
-            else
-                _context.CartItems.Add(new CartItem
-                {
-                    UserId = userId,
-                    ProductId = dto.ProductId,
-                    Quantity = dto.Quantity
-                });
+                await _context.SaveChangesAsync();
 
+                return new CartItemResponseDto
+                {
+                    Id = existing.Id,
+                    ProductId = existing.ProductId,
+                    ProductName = existing.Product.Name,
+                    UnitPrice = existing.Product.Price,
+                    Quantity = existing.Quantity,
+                    Subtotal = existing.Quantity * existing.Product.Price
+                };
+            }
+
+            var product = await _context.Products.FindAsync(dto.ProductId)
+                ?? throw new KeyNotFoundException($"Product {dto.ProductId} not found.");
+
+            var newItem = new CartItem
+            {
+                UserId = userId,
+                ProductId = dto.ProductId,
+                Quantity = dto.Quantity
+            };
+
+            _context.CartItems.Add(newItem);
             await _context.SaveChangesAsync();
+
+            return new CartItemResponseDto
+            {
+                Id = newItem.Id,
+                ProductId = newItem.ProductId,
+                ProductName = product.Name,
+                UnitPrice = product.Price,
+                Quantity = newItem.Quantity,
+                Subtotal = newItem.Quantity * product.Price
+            };
         }
 
         public async Task UpdateCartItemAsync(string userId, int cartItemId, int quantity)

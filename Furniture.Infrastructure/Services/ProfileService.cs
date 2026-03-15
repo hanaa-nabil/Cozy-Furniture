@@ -128,9 +128,19 @@ namespace Furniture.Infrastructure.Services
             LastName = user.LastName ?? "",
             Email = user.Email ?? "",
             UserName = user.UserName ?? "",
-            ProfilePictureUrl = user.ProfilePictureUrl,
+            ProfilePictureUrl = string.IsNullOrEmpty(user.ProfilePictureUrl)
+                            ? GenerateAvatarUrl(user.FirstName, user.LastName)
+                            : user.ProfilePictureUrl,
             CreatedAt = user.CreatedAt
         };
+        private static string GenerateAvatarUrl(string? firstName, string? lastName)
+        {
+            var first = string.IsNullOrWhiteSpace(firstName) ? "?" : firstName.Trim()[0].ToString();
+            var last = string.IsNullOrWhiteSpace(lastName) ? "" : lastName.Trim()[0].ToString();
+            var name = Uri.EscapeDataString($"{first}{last}".ToUpper());
+
+            return $"https://ui-avatars.com/api/?name={name}&background=534AB7&color=fff&size=128&bold=true&rounded=true";
+        }
 
         /// <summary>
         /// Extracts the Cloudinary public_id from a secure URL.

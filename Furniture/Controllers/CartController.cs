@@ -30,8 +30,8 @@ namespace Furniture.Controllers
         [HttpPost]
         public async Task<IActionResult> AddToCart([FromBody] CartItemDto dto)
         {
-            await _cartService.AddToCartAsync(UserId, dto);
-            return Ok();
+            var result = await _cartService.AddToCartAsync(UserId, dto);
+            return Ok(new { Success = true, Data = result });
         }
 
         // PUT api/cart/{id}?quantity=3

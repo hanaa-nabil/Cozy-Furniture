@@ -15,12 +15,17 @@ namespace Furniture.Infrastructure.Services
     public class CategoryService : ICategoryService
     {
         private readonly ApplicationDbContext _context;
-
-        public CategoryService(ApplicationDbContext context) => _context = context;
-
+        private readonly IImageService _imageService;
+        public CategoryService(ApplicationDbContext context, IImageService imageService)
+        {
+            _context = context;
+            _imageService = imageService;
+        }
         public async Task<PagedResult<CategoryResponseDto>> GetAllAsync(CategoryQueryParameters query)
         {
-            var q = _context.Categories.AsQueryable();
+            var q = _context.Categories
+                .Include(c => c.Products)
+                .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(query.Search))
             {
@@ -33,6 +38,9 @@ namespace Furniture.Infrastructure.Services
 
             q = query.SortBy?.ToLower() switch
             {
+                "id" => query.SortOrder == "desc"
+                                ? q.OrderByDescending(c => c.Id)
+                                : q.OrderBy(c => c.Id),
                 "name" => query.SortOrder == "desc"
                                 ? q.OrderByDescending(c => c.Name)
                                 : q.OrderBy(c => c.Name),
@@ -51,8 +59,10 @@ namespace Furniture.Infrastructure.Services
                 {
                     Id = c.Id,
                     Name = c.Name,
+                    Description = c.Description,
                     ImageUrl = c.ImageUrl,
-                    IsActive = c.IsActive
+                    IsActive = c.IsActive,
+                    ProductCount = c.Products.Count
                 })
                 .ToListAsync();
 
@@ -84,12 +94,18 @@ namespace Furniture.Infrastructure.Services
 
             if (nameExists)
                 throw new InvalidOperationException("A category with this name already exists.");
+            string? imageUrl = null;
+            if (dto.Image != null && dto.Image.Length > 0)
+                imageUrl = await _imageService.UploadImageAsync(dto.Image, "categories");
+            else if (dto.ImageUrl != null)
+                imageUrl = dto.ImageUrl;
 
             var category = new Category
             {
                 Name = dto.Name,
                 Description = dto.Description,
-                ImageUrl = dto.ImageUrl,
+                ImageUrl = imageUrl, 
+
                 IsActive = dto.IsActive
             };
 
@@ -119,6 +135,13 @@ namespace Furniture.Infrastructure.Services
 
             if (dto.Description != null) category.Description = dto.Description;
             if (dto.ImageUrl != null) category.ImageUrl = dto.ImageUrl;
+            category.IsActive = dto.IsActive;
+
+
+            if (dto.Image != null && dto.Image.Length > 0)
+                category.ImageUrl = await _imageService.UploadImageAsync(dto.Image, "categories");
+            else if (dto.ImageUrl != null)
+                category.ImageUrl = dto.ImageUrl;
 
             await _context.SaveChangesAsync();
 
@@ -149,6 +172,7 @@ namespace Furniture.Infrastructure.Services
             Name = c.Name,
             Description = c.Description,
             ImageUrl = c.ImageUrl,
+            IsActive = c.IsActive,        
             ProductCount = c.Products?.Count ?? 0
         };
     }

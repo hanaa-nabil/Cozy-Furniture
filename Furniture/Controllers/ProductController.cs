@@ -13,66 +13,60 @@ namespace Furniture.Controllers
     public class ProductController : ControllerBase
     {
         private readonly IProductService _productService;
-        private readonly IImageService _imageService;
 
-        public ProductController(IProductService productService, IImageService imageService)
+        public ProductController(IProductService productService)
         {
             _productService = productService;
-            _imageService = imageService;
         }
 
-        // GET api/product
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetAll([FromQuery] ProductQueryParameters query)
         {
             var result = await _productService.GetAllAsync(query);
             return Ok(new { Success = true, Data = result });
         }
 
-        // GET api/product/{id}
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetById(int id)
         {
             var result = await _productService.GetByIdAsync(id);
-            return Ok(result);
+            return Ok(new { Success = true, Data = result });
         }
 
-        // GET api/product/category/{categoryId}
         [HttpGet("category/{categoryId}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetByCategory(int categoryId)
         {
             var result = await _productService.GetByCategoryAsync(categoryId);
-            return Ok(result);
+            return Ok(new { Success = true, Data = result });
         }
 
-        // POST api/product  (Admin only)
         [HttpPost]
-        [Authorize(Roles = AuthConstants.Roles.Admin)]
+        [Authorize(Roles = "Admin,Manager,Seller")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> Create([FromForm] CreateProductDto dto)
         {
             var result = await _productService.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+            return CreatedAtAction(nameof(GetById), new { id = result.Id }, new { Success = true, Data = result });
         }
-        
-        
-        // PUT api/product/{id}  (Admin only)
+
         [HttpPut("{id}")]
-        [Authorize(Roles = AuthConstants.Roles.Admin)]
-        public async Task<IActionResult> Update(int id, [FromBody] UpdateProductDto dto)
+        [Authorize(Roles = "Admin,Manager,Seller")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> Update(int id, [FromForm] UpdateProductDto dto)
         {
             var result = await _productService.UpdateAsync(id, dto);
-            return Ok(result);
+            return Ok(new { Success = true, Data = result });
         }
-        
 
-        // DELETE api/product/{id}  (Admin only)
         [HttpDelete("{id}")]
-        [Authorize(Roles = AuthConstants.Roles.Admin)]
+        [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> Delete(int id)
         {
             await _productService.DeleteAsync(id);
-            return NoContent();
+            return Ok(new { Success = true, Message = "Product deleted successfully." });
         }
     }
 }

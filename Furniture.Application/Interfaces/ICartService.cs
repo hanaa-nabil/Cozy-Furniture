@@ -10,7 +10,7 @@ namespace Furniture.Application.Interfaces
     public interface ICartService
     {
         Task<List<CartItemResponseDto>> GetCartAsync(string userId);
-        Task AddToCartAsync(string userId, CartItemDto dto);
+        Task<CartItemResponseDto> AddToCartAsync(string userId, CartItemDto dto);
         Task UpdateCartItemAsync(string userId, int cartItemId, int quantity);
         Task RemoveFromCartAsync(string userId, int cartItemId);
         Task ClearCartAsync(string userId);

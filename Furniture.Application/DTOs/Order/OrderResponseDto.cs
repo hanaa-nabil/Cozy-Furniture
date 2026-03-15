@@ -14,6 +14,7 @@ namespace Furniture.Application.DTOs.Order
         public string Status { get; set; }
         public string ShippingAddress { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string? UserEmail { get; set; }
     }
 
 }

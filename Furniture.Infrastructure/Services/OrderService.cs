@@ -10,37 +10,6 @@ namespace Furniture.Infrastructure.Services
 {
     public class OrderService(ApplicationDbContext context) : IOrderService
     {
-        public async Task<OrderResponseDto> CreateOrderFromCartAsync(string userId)
-        {
-            var cartItems = await context.CartItems
-                .Include(c => c.Product)
-                .Where(c => c.UserId == userId)
-                .ToListAsync();
-
-            if (!cartItems.Any())
-                throw new InvalidOperationException("Cart is empty.");
-
-            var order = new Order
-            {
-                UserId = userId,
-                Status = OrderStatus.Pending,
-                CreatedAt = DateTime.UtcNow,
-                TotalPrice = cartItems.Sum(c => c.Product.Price * c.Quantity),
-                OrderItems = cartItems.Select(c => new OrderItem
-                {
-                    ProductId = c.ProductId,
-                    Quantity = c.Quantity,
-                    UnitPrice = c.Product.Price
-                }).ToList()
-            };
-
-            context.Orders.Add(order);
-            context.CartItems.RemoveRange(cartItems);
-            await context.SaveChangesAsync();
-
-            return MapToDto(order);
-        }
-
         public async Task<OrderResponseDto> CreateAsync(string userId, CreateOrderDto dto)
         {
             var cartItems = await context.CartItems
@@ -50,6 +19,21 @@ namespace Furniture.Infrastructure.Services
 
             if (!cartItems.Any())
                 throw new InvalidOperationException("Cannot create an order from an empty cart.");
+
+            foreach (var item in cartItems)
+            {
+                var product = await context.Products.FindAsync(item.ProductId);
+
+                if (product == null)
+                    throw new KeyNotFoundException($"Product '{item.ProductId}' not found.");
+
+                if (product.Stock < item.Quantity)
+                    throw new InvalidOperationException(
+                        $"Insufficient stock for '{product.Name}'. " +
+                        $"Available: {product.Stock}, Requested: {item.Quantity}");
+
+                product.Stock -= item.Quantity;
+            }
 
             var order = new Order
             {
@@ -69,15 +53,21 @@ namespace Furniture.Infrastructure.Services
             context.Orders.Add(order);
             context.CartItems.RemoveRange(cartItems);
             await context.SaveChangesAsync();
+            var createdOrder = await context.Orders
+                                     .Include(o => o.OrderItems)
+                                     .ThenInclude(i => i.Product)  
+                                     .Include(o => o.User)         
+                                     .FirstOrDefaultAsync(o => o.Id == order.Id);
 
-            return MapToDto(order);
+            return MapToDto(createdOrder!);
         }
-
+           
         public async Task<PagedResult<OrderResponseDto>> GetAllAsync(OrderQueryParameters query)
         {
             var q = context.Orders
                 .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
+                .Include(o => o.User)
                 .AsQueryable();
 
             // Search
@@ -133,6 +123,7 @@ namespace Furniture.Infrastructure.Services
             var q = context.Orders
                 .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
+                .Include(o => o.User)
                 .Where(o => o.UserId == userId)
                 .AsQueryable();
 
@@ -186,10 +177,13 @@ namespace Furniture.Infrastructure.Services
             return order is null ? null : MapToDto(order);
         }
 
-        public async Task<OrderResponseDto> UpdateStatusAsync(Guid id, string status)
+        public async Task<OrderResponseDto> UpdateStatusAsync(int id, string status)
         {
-            var order = await context.Orders.FindAsync(id)
-                ?? throw new KeyNotFoundException("Order not found.");
+            var order = await context.Orders
+                                   .Include(o => o.OrderItems)
+                                   .ThenInclude(i => i.Product)
+                                   .FirstOrDefaultAsync(o => o.Id == id)
+                                    ?? throw new KeyNotFoundException("Order not found.");
 
             if (!Enum.TryParse<OrderStatus>(status, ignoreCase: true, out var orderStatus))
                 throw new ArgumentException(
@@ -204,15 +198,32 @@ namespace Furniture.Infrastructure.Services
         public async Task CancelOrderAsync(string userId, int orderId)
         {
             var order = await context.Orders
+                .Include(o => o.OrderItems)      
+                .ThenInclude(i => i.Product)       
                 .FirstOrDefaultAsync(o => o.Id == orderId && o.UserId == userId)
-                ?? throw new KeyNotFoundException("Order not found.");
+               ?? throw new KeyNotFoundException("Order not found.");
+
+
+            foreach (var item in order.OrderItems)
+            {
+                item.Product.Stock += item.Quantity;
+            }
+
 
             if (order.Status != OrderStatus.Pending)
                 throw new InvalidOperationException("Only pending orders can be cancelled.");
 
             order.Status = OrderStatus.Cancelled;
             await context.SaveChangesAsync();
+
+            if (order.Status != OrderStatus.Pending)
+                throw new InvalidOperationException("Only pending orders can be cancelled.");
+
+           
+            order.Status = OrderStatus.Cancelled;
+            await context.SaveChangesAsync();
         }
+        
 
         // -------------------------------------------------------------------------
         private static OrderResponseDto MapToDto(Order o) => new()
@@ -222,6 +233,7 @@ namespace Furniture.Infrastructure.Services
             Status = o.Status.ToString(),   // enum → string
             ShippingAddress = o.ShippingAddress,
             CreatedAt = o.CreatedAt,
+            UserEmail = o.User?.Email,
             Items = o.OrderItems?.Select(i => new OrderItemResponseDto
             {
                 ProductId = i.ProductId,

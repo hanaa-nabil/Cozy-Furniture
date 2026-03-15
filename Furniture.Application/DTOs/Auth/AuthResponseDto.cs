@@ -15,5 +15,7 @@ namespace Furniture.Application.DTOs.Auth
         public List<string>? Roles { get; set; }
         public DateTime? ExpiresAt { get; set; }
         public string? ProfilePictureUrl { get; set; }
+        public string? FirstName { get; set; } 
+        public string? LastName { get; set; }
     }
 }

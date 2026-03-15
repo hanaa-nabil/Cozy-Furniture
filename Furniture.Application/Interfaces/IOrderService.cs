@@ -15,8 +15,7 @@ namespace Furniture.Application.Interfaces
         Task<PagedResult<OrderResponseDto>> GetUserOrdersAsync(string userId, OrderQueryParameters query);  // add this
         Task<OrderResponseDto?> GetByIdAsync(int id);
         Task<OrderResponseDto> CreateAsync(string userId, CreateOrderDto dto);
-        Task<OrderResponseDto> CreateOrderFromCartAsync(string userId);
-        Task<OrderResponseDto> UpdateStatusAsync(Guid id, string status);
+        Task<OrderResponseDto> UpdateStatusAsync(int id, string status);
 
     }
 }

@@ -182,6 +182,8 @@ namespace Infrastructure.Services
                 Token = token,
                 ExpiresAt = expiresAt,
                 Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
                 Roles = userRoles.ToList(),
                 ProfilePictureUrl = user.ProfilePictureUrl
             };
@@ -239,6 +241,8 @@ namespace Infrastructure.Services
                 Token = token,
                 ExpiresAt = expiresAt,
                 Email = user.Email,
+                FirstName = user.FirstName,  
+                LastName = user.LastName,  
                 Roles = userRoles.ToList(),
                 ProfilePictureUrl = user.ProfilePictureUrl
             };
@@ -268,11 +272,50 @@ namespace Infrastructure.Services
 
         public async Task<AuthResponseDto> VerifyOtpAsync(VerifyOtpDto verifyOtpDto)
         {
-            var isValid = await _otpService.ValidateOtpAsync(verifyOtpDto.Email, verifyOtpDto.Otp);
+            var user = await _userManager.FindByEmailAsync(verifyOtpDto.Email);
+            if (user == null)
+                return Fail(AuthConstants.ErrorMessages.UserNotFound);
+
+            bool isValid;
+            try
+            {
+                isValid = await _otpService.ValidateOtpAsync(verifyOtpDto.Email, verifyOtpDto.Otp);
+            }
+            catch (Exception ex)
+            {
+                return Fail(
+                    ex.Message.Contains("redis", StringComparison.OrdinalIgnoreCase)
+                        ? "Verification service is temporarily unavailable. Please try again later."
+                        : AuthConstants.ErrorMessages.InvalidOtp
+                );
+            }
+
             if (!isValid)
                 return Fail(AuthConstants.ErrorMessages.InvalidOtp);
 
-            return new AuthResponseDto { Success = true, Message = AuthConstants.SuccessMessages.OtpVerified };
+            // Confirm email
+            user.IsEmailConfirmed = true;
+            user.EmailConfirmed = true;
+            await _userManager.UpdateAsync(user);
+
+            try { await _otpService.InvalidateOtpAsync(verifyOtpDto.Email); }
+            catch {  }
+
+            var userRoles = await _userManager.GetRolesAsync(user);
+            var (token, expiresAt) = GenerateJwtToken(user, userRoles);
+
+            return new AuthResponseDto
+            {
+                Success = true,
+                Message = AuthConstants.SuccessMessages.OtpVerified,
+                Token = token,
+                ExpiresAt = expiresAt,
+                Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Roles = userRoles.ToList(),
+                ProfilePictureUrl = user.ProfilePictureUrl
+            };
         }
 
         public async Task<AuthResponseDto> ResetPasswordAsync(ResetPasswordDto resetPasswordDto)
@@ -370,6 +413,8 @@ namespace Infrastructure.Services
                 Token = token,
                 ExpiresAt = expiresAt,
                 Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
                 Roles = userRoles.ToList(),
                 ProfilePictureUrl = user.ProfilePictureUrl
             };

@@ -1,6 +1,7 @@
 ﻿using Furniture.Application.DTOs.Profile;
 using Furniture.Application.Interfaces;
 using Furniture.Domain.Constants;
+using Furniture.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -14,10 +15,12 @@ namespace Furniture.Controllers
     public class ProfileController : ControllerBase
     {
         private readonly IProfileService _profileService;
+        private readonly ICacheService _cacheService;
 
-        public ProfileController(IProfileService profileService)
+        public ProfileController(IProfileService profileService, ICacheService cacheService)
         {
             _profileService = profileService;
+            _cacheService = cacheService;
         }
 
         private string UserId => User.FindFirstValue(AuthConstants.Claims.UserId)!;
@@ -25,8 +28,14 @@ namespace Furniture.Controllers
         [HttpGet]
         public async Task<IActionResult> GetProfile()
         {
-            var profile = await _profileService.GetProfileAsync(UserId);
-            return Ok(profile);
+            var userId = User.FindFirstValue(AuthConstants.Claims.UserId);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            await _cacheService.RemoveAsync($"profile:{userId}"); 
+
+            var result = await _profileService.GetProfileAsync(userId);
+            return Ok(result);
         }
 
         // PUT api/profile

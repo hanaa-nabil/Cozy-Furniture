@@ -10,6 +10,7 @@ namespace Furniture.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class CategoryController : ControllerBase
     {
         private readonly ICategoryService _categoryService;
@@ -32,22 +33,23 @@ namespace Furniture.Controllers
             return Ok(result);
         }
 
-        // POST api/category  (Admin only)
         [HttpPost]
         [Authorize(Roles = AuthConstants.Roles.Admin)]
-        public async Task<IActionResult> Create([FromBody] CreateCategoryDto dto)
+        [Consumes("multipart/form-data")]  
+        public async Task<IActionResult> Create([FromForm] CreateCategoryDto dto) 
         {
             var result = await _categoryService.CreateAsync(dto);
-            return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+            return CreatedAtAction(nameof(GetById), new { id = result.Id },
+                new { Success = true, Data = result });
         }
 
-        // PUT api/category/{id}  (Admin only)
         [HttpPut("{id}")]
         [Authorize(Roles = AuthConstants.Roles.Admin)]
-        public async Task<IActionResult> Update(int id, [FromBody] UpdateCategoryDto dto)
+        [Consumes("multipart/form-data")]   
+        public async Task<IActionResult> Update(int id, [FromForm] UpdateCategoryDto dto) 
         {
             var result = await _categoryService.UpdateAsync(id, dto);
-            return Ok(result);
+            return Ok(new { Success = true, Data = result });
         }
 
         // DELETE api/category/{id}  (Admin only)

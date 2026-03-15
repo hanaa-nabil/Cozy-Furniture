@@ -81,6 +81,10 @@ namespace Furniture.Infrastructure.Services
             // Sorting
             q = query.SortBy?.ToLower() switch
             {
+
+                "id" => query.SortOrder == "desc"
+                                ? q.OrderByDescending(c => c.Id)
+                                : q.OrderBy(c => c.Id),
                 "price" => query.SortOrder == "desc"
                                 ? q.OrderByDescending(p => p.Price)
                                 : q.OrderBy(p => p.Price),
@@ -110,7 +114,8 @@ namespace Furniture.Infrastructure.Services
                     Stock = p.Stock,
                     ImageUrl = p.ImageUrl,
                     CategoryId = p.CategoryId,
-                    CategoryName = p.Category.Name
+                    CategoryName = p.Category.Name,
+                    CreatedAt = p.CreatedAt
                 })
                 .ToListAsync();
 
@@ -180,12 +185,13 @@ namespace Furniture.Infrastructure.Services
 
             var product = new Product
             {
-                Name        = dto.Name,
+                Name = dto.Name,
                 Description = dto.Description,
-                Price       = dto.Price,
-                Stock       = dto.Stock,
-                ImageUrl    = imageUrl,
-                CategoryId  = dto.CategoryId
+                Price = dto.Price,
+                Stock = dto.Stock,
+                ImageUrl = imageUrl,
+                CategoryId = dto.CategoryId,
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.Products.Add(product);
@@ -197,9 +203,8 @@ namespace Furniture.Infrastructure.Services
 
         public async Task<ProductResponseDto> UpdateAsync(int id, UpdateProductDto dto)
         {
-            var product = await _context.Products.FindAsync(id);
-            if (product == null)
-                throw new KeyNotFoundException("Product not found.");
+            var product = await _context.Products.FindAsync(id)
+                ?? throw new KeyNotFoundException("Product not found.");
 
             if (dto.CategoryId.HasValue)
             {
@@ -214,11 +219,13 @@ namespace Furniture.Infrastructure.Services
             if (dto.Description != null) product.Description = dto.Description;
             if (dto.Price != null) product.Price = dto.Price.Value;
             if (dto.Stock != null) product.Stock = dto.Stock.Value;
-            if (dto.ImageUrl != null) product.ImageUrl = dto.ImageUrl;
+
+            if (dto.Image != null && dto.Image.Length > 0)
+                product.ImageUrl = await _imageService.UploadImageAsync(dto.Image, "products");
+            else if (dto.ImageUrl != null)
+                product.ImageUrl = dto.ImageUrl;
 
             await _context.SaveChangesAsync();
-
-            // Invalidate this product's cache and list caches
             await InvalidateProductCaches(product.CategoryId, id);
 
             return await GetByIdAsync(product.Id);

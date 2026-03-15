@@ -19,17 +19,7 @@ namespace Furniture.Controllers
 
         private string UserId => User.FindFirstValue(AuthConstants.Claims.UserId)!;
 
-        // POST api/order
-        //[HttpPost]
-        //public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto dto)
-        //{
-        //   // var result = await _orderService.CreateOrderFromCartAsync(UserId, dto);
-        //    return Ok(result);
-        //}
-
-        // GET api/order
-        // OrderController.cs
-        [HttpGet]
+        [HttpGet("admin/orders")]
         [Authorize(Roles = "Admin,Manager")]
         public async Task<IActionResult> GetAll([FromQuery] OrderQueryParameters query)
         {
@@ -51,6 +41,23 @@ namespace Furniture.Controllers
         {
             await _orderService.CancelOrderAsync(UserId, id);
             return Ok();
+        }
+
+        //Endpoint to create order from cart
+        [HttpPost("checkout")]
+        [Authorize]
+        public async Task<IActionResult> Checkout([FromBody] CreateOrderDto dto)
+        {
+            var result = await _orderService.CreateAsync(UserId, dto);
+            return Ok(new { Success = true, Data = result });
+        }
+
+        [HttpPut("/admin/{id}/status")]
+        [Authorize(Roles = "Admin,Manager")]
+        public async Task<IActionResult> UpdateStatus(int id, [FromBody] string status)
+        {
+            var result = await _orderService.UpdateStatusAsync(id, status);
+            return Ok(new { Success = true, Data = result });
         }
     }
 }
