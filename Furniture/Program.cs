@@ -1,6 +1,7 @@
 using Furniture.Application.Interfaces;
 using Furniture.Domain.Constants;
 using Furniture.Domain.Entities;
+using Furniture.Hubs;
 using Furniture.Infrastructure.Data;
 using Furniture.Infrastructure.Services;
 using Infrastructure.Services;
@@ -112,6 +113,10 @@ namespace Furniture
             builder.Services.AddScoped<IImageService, ImageService>();
             builder.Services.AddScoped<ICacheService, CacheService>();
             builder.Services.AddScoped<ISearchService, SearchService>();
+
+            builder.Services.AddSignalR();
+            builder.Services.AddScoped<INotificationService, NotificationService>();
+
 
             builder.Services.AddControllers(options =>
             {
@@ -232,7 +237,7 @@ namespace Furniture
                         await userManager.AddToRoleAsync(user, "Admin");
                 }
             }
-
+            app.MapHub<NotificationHub>("/hubs/notifications");
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment()|| app.Environment.IsProduction())
             {

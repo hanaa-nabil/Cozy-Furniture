@@ -28,6 +28,7 @@ namespace Furniture.Infrastructure.Services
                     ProductId = c.ProductId,
                     ProductName = c.Product.Name,
                     UnitPrice = c.Product.Price,
+                    ImageUrl = c.Product.ImageUrl,
                     Quantity = c.Quantity,
                     Subtotal = c.Quantity * c.Product.Price
                 }).ToListAsync();
@@ -49,6 +50,7 @@ namespace Furniture.Infrastructure.Services
                     Id = existing.Id,
                     ProductId = existing.ProductId,
                     ProductName = existing.Product.Name,
+                    ImageUrl = existing.Product.ImageUrl,
                     UnitPrice = existing.Product.Price,
                     Quantity = existing.Quantity,
                     Subtotal = existing.Quantity * existing.Product.Price
@@ -73,6 +75,7 @@ namespace Furniture.Infrastructure.Services
                 Id = newItem.Id,
                 ProductId = newItem.ProductId,
                 ProductName = product.Name,
+                ImageUrl = product.ImageUrl,
                 UnitPrice = product.Price,
                 Quantity = newItem.Quantity,
                 Subtotal = newItem.Quantity * product.Price

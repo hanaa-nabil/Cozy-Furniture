@@ -4,6 +4,7 @@ using Furniture.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Furniture.Controllers
 {
@@ -23,7 +24,7 @@ namespace Furniture.Controllers
         public async Task<IActionResult> GetCart()
         {
             var result = await _cartService.GetCartAsync(UserId);
-            return Ok(result);
+            return Ok(new{Success = true, Data = result});
         }
 
         // POST api/cart
@@ -39,7 +40,7 @@ namespace Furniture.Controllers
         public async Task<IActionResult> Update(int id, [FromQuery] int quantity)
         {
             await _cartService.UpdateCartItemAsync(UserId, id, quantity);
-            return Ok();
+            return Ok(new { Success = true });
         }
 
         // DELETE api/cart/{id}
@@ -47,7 +48,7 @@ namespace Furniture.Controllers
         public async Task<IActionResult> Remove(int id)
         {
             await _cartService.RemoveFromCartAsync(UserId, id);
-            return Ok();
+            return Ok(new { Success = true });
         }
 
         // DELETE api/cart/clear
@@ -55,7 +56,7 @@ namespace Furniture.Controllers
         public async Task<IActionResult> Clear()
         {
             await _cartService.ClearCartAsync(UserId);
-            return Ok();
+            return Ok(new { Success = true });
         }
     }
 }

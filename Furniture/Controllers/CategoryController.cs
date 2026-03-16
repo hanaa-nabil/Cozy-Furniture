@@ -33,7 +33,7 @@ namespace Furniture.Controllers
             return Ok(result);
         }
 
-        [HttpPost]
+        [HttpPost("Admin/Create")]
         [Authorize(Roles = AuthConstants.Roles.Admin)]
         [Consumes("multipart/form-data")]  
         public async Task<IActionResult> Create([FromForm] CreateCategoryDto dto) 
@@ -43,7 +43,7 @@ namespace Furniture.Controllers
                 new { Success = true, Data = result });
         }
 
-        [HttpPut("{id}")]
+        [HttpPut("Admin/Update/{id}")]
         [Authorize(Roles = AuthConstants.Roles.Admin)]
         [Consumes("multipart/form-data")]   
         public async Task<IActionResult> Update(int id, [FromForm] UpdateCategoryDto dto) 
@@ -53,7 +53,7 @@ namespace Furniture.Controllers
         }
 
         // DELETE api/category/{id}  (Admin only)
-        [HttpDelete("{id}")]
+        [HttpDelete("Admin/Delete/{id}")]
         [Authorize(Roles = AuthConstants.Roles.Admin)]
         public async Task<IActionResult> Delete(int id)
         {

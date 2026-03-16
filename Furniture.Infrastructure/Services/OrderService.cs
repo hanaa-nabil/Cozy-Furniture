@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Furniture.Infrastructure.Services
 {
-    public class OrderService(ApplicationDbContext context) : IOrderService
+    public class OrderService(ApplicationDbContext context, INotificationService notificationService) : IOrderService
     {
         public async Task<OrderResponseDto> CreateAsync(string userId, CreateOrderDto dto)
         {
@@ -33,6 +33,9 @@ namespace Furniture.Infrastructure.Services
                         $"Available: {product.Stock}, Requested: {item.Quantity}");
 
                 product.Stock -= item.Quantity;
+                context.Entry(product).State = EntityState.Modified;
+                if (product.Stock <= 5)
+                    await notificationService.NotifyLowStockAsync(product);
             }
 
             var order = new Order
@@ -53,6 +56,9 @@ namespace Furniture.Infrastructure.Services
             context.Orders.Add(order);
             context.CartItems.RemoveRange(cartItems);
             await context.SaveChangesAsync();
+            await notificationService.NotifyOrderPlacedAsync(order);
+
+
             var createdOrder = await context.Orders
                                      .Include(o => o.OrderItems)
                                      .ThenInclude(i => i.Product)  
@@ -191,7 +197,7 @@ namespace Furniture.Infrastructure.Services
 
             order.Status = orderStatus;
             await context.SaveChangesAsync();
-
+            await notificationService.NotifyOrderStatusChangedAsync(order);
             return MapToDto(order);
         }
 
